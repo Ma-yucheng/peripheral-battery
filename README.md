@@ -2,13 +2,20 @@
 
 [![build](https://github.com/Ma-yucheng/peripheral-battery/actions/workflows/build.yml/badge.svg)](https://github.com/Ma-yucheng/peripheral-battery/actions/workflows/build.yml)
 
-一个纯本地运行的 macOS 外设电量监控小组件：**实时**读取鼠标、键盘、手柄、耳机的电量，
-用 6 种显示模式展示，每台设备都有独立的勾选框，并以 **菜单栏图标 + 桌面小组件** 两种形态常驻。
+**给你的 Mac 外设装一块电量表。**
+菜单栏常驻 + 桌面小组件，实时显示鼠标、键盘、手柄、耳机的剩余电量。
 
-- **实时**：BLE 走特征值通知（毫秒级）；HID / 手柄 / 系统蓝牙 1–8 秒轮询
-- **真实**：直接读系统 API（CoreBluetooth、IOKit、GameController、system_profiler），无任何模拟数据
+> Real-time battery monitor for Bluetooth peripherals on macOS — menu bar app + desktop widget.
+
+macOS 自带的蓝牙菜单只对少数设备显示电量，第三方的鼠标、键盘、手柄基本是黑盒，
+用久了只能靠猜「这鼠标还能撑几天」。这个 App 把系统里四条能读到电量的通道
+（BLE 标准电池服务、IOKit HID、GameController、蓝牙系统信息）合并成一份设备列表统一展示；
+**读不到的设备会明确显示 `--`，不猜、不编数据。**
+
+- **实时**：BLE 走特征值通知（毫秒级），其余 1–8 秒轮询
+- **真实**：只读系统公开 API，核心数据实测校验过，无任何模拟数据
 - **本地**：不联网、不上传、不需要账号，数据不出这台机器
-- **原生**：Swift + SwiftUI + AppKit，无 Electron、无浏览器内核
+- **原生**：Swift + SwiftUI + AppKit，约 3700 行，无 Electron、无浏览器内核
 
 ![卡片模式](docs/panel-cards.png)
 
