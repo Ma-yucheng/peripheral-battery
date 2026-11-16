@@ -43,6 +43,14 @@ if [[ -f "$ROOT/Resources/AppIcon.icns" ]]; then
   cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 fi
 
+# 记录构建信息，方便区分 /Applications 里装的是哪一版
+{
+  echo "commit: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  echo "branch: $(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  echo "built:  $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "swift:  $(swiftc --version 2>/dev/null | head -1)"
+} > "$APP/Contents/Resources/build-info.txt"
+
 echo "==> 本地签名（ad-hoc）"
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "   （跳过签名，不影响本地运行）"
 

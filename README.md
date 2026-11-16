@@ -61,6 +61,47 @@ cp -R build/PeripheralBattery.app /Applications/
 >
 > 首次编译（或删掉 `.build` 缓存后）约需 3–6 分钟；之后增量编译会快很多。
 
+## 更新已安装的版本（/Applications）
+
+`/Applications/PeripheralBattery.app` 是**一份独立的拷贝**，改源码不会自动同步过去。改完代码后跑：
+
+```bash
+./install.sh
+```
+
+它会依次做：编译 → 退出正在运行的实例 → 备份旧版本到 `PeripheralBattery.app.bak` → 替换 `/Applications` → 校验签名 → 重新启动。
+
+只想看它会做什么、不碰系统目录：
+
+```bash
+./install.sh --dry-run
+```
+
+不想用脚本，手动三步等价：
+
+```bash
+./build.sh
+pkill -f "PeripheralBattery.app/Contents/MacOS/PeripheralBattery"
+rm -rf /Applications/PeripheralBattery.app && cp -R build/PeripheralBattery.app /Applications/
+open /Applications/PeripheralBattery.app
+```
+
+几个容易踩的点：
+
+| 现象 | 原因 / 处理 |
+| --- | --- |
+| 更新后首次启动又弹「蓝牙权限」 | ad-hoc 签名每次重编都会变，系统当成新版本重新授权，点「允许」即可 |
+| 显示模式 / 勾选 / 小组件位置没丢 | 这些存在 UserDefaults，按 Bundle ID 归属，没改 ID 就不会丢 |
+| 别直接改 `/Applications` 里那份 | 下次 `./install.sh` 会整个覆盖，源码才是唯一来源 |
+| 想确认当前装的是哪一版 | `cat /Applications/PeripheralBattery.app/Contents/Resources/build-info.txt` |
+| 想回滚上一个版本 | `rm -rf /Applications/PeripheralBattery.app && mv /Applications/PeripheralBattery.app.bak /Applications/PeripheralBattery.app` |
+
+改完记得把源码同步到 GitHub（CI 会重新验证构建）：
+
+```bash
+git add -A && git commit -m "描述你的改动" && git push
+```
+
 ## 界面速览
 
 | 环形模式（面板） | 桌面小组件 |
@@ -159,7 +200,8 @@ PeripheralBattery/
 │   └── AppIcon.icns     App 图标（由 tools/make-icon.swift 生成）
 ├── docs/               README 截图
 ├── build.sh            编译 .app（ad-hoc 签名）
-├── run.sh              编译并启动
+├── install.sh          编译并替换 /Applications 里已安装的版本
+├── run.sh              编译并启动（不安装）
 ├── tools/
 │   ├── build-cli.sh    不看界面，在终端直接打印实时电量（自检）
 │   ├── build-icon.sh   重新生成 App 图标
