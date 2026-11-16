@@ -311,3 +311,11 @@ PeripheralBattery/
 - 不联网：代码中没有任何网络请求
 - 只读取电量、名称、地址等公开的 HID / GATT 属性
 - 显示模式、设备勾选、小组件位置只存在本机 UserDefaults
+
+## 打赏
+
+> 感谢打赏，多少无所谓【比心】（我知道这是赛博乞讨，但是拜托了）
+
+| 微信支付 | 支付宝 |
+| :---: | :---: |
+| <img src="docs/wechat-pay.jpg" width="280" alt="微信支付收款码"> | <img src="docs/alipay.jpg" width="280" alt="支付宝收款码"> |
