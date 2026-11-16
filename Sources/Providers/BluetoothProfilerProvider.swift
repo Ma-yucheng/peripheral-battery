@@ -104,7 +104,6 @@ final class BluetoothProfilerProvider {
         // 过滤掉手机 / 平板等非外设
         if minorType.isEmpty && components.isEmpty && main == nil { return nil }
         if kind == .other && minorType.isEmpty && main == nil && components.isEmpty { return nil }
-        if isPhoneLike(minorType: minorType, name: name) { return nil }
         // 已经离线且没有电量数据的设备不进入列表，避免满屏 "--"
         if !connected && main == nil && components.isEmpty { return nil }
 
@@ -131,12 +130,6 @@ final class BluetoothProfilerProvider {
             lastUpdate: Date(),
             isConnected: connected
         )
-    }
-
-    private static func isPhoneLike(minorType: String, name: String) -> Bool {
-        let t = minorType.lowercased()
-        if t.contains("phone") || t.contains("pad") || t.contains("computer") || t.contains("watch") { return true }
-        return DeviceFilter.isPhoneLike(name)
     }
 
     private static func kind(from minorType: String, name: String) -> DeviceKind {

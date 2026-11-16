@@ -52,6 +52,12 @@ struct DashboardView: View {
                            selectorExpanded: settings.selectorExpanded)
     }
 
+    /// 风格本身决定明暗；自定义背景按图片平均亮度自动切换
+    private var isLightStyle: Bool {
+        if settings.visualStyle == .custom { return false }
+        return settings.visualStyle.isLight
+    }
+
     private var subtitle: String {
         let time = DateFormatter.localizedString(from: store.lastRefresh, dateStyle: .none, timeStyle: .medium)
         return "\(visibleDevices.count)/\(store.devices.count) 台显示 · 更新 \(time)"
@@ -70,7 +76,12 @@ struct DashboardView: View {
             footer
         }
         .frame(width: Layout.panelWidth, height: panelHeight)
-        .background(Color.clear)
+        .background(
+            StyleBackground(style: settings.visualStyle,
+                            customImage: CustomBackground.current(),
+                            dim: settings.customDim)
+        )
+        .environment(\.colorScheme, isLightStyle ? .light : .dark)
     }
 
     // MARK: 头部

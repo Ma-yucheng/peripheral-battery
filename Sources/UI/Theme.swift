@@ -51,6 +51,29 @@ enum Layout {
     }
 }
 
+/// 面板 / 小组件共用的背景：预设渐变或用户上传的图片
+struct StyleBackground: View {
+    let style: VisualStyle
+    let customImage: NSImage?
+    let dim: Double
+
+    var body: some View {
+        ZStack {
+            if style == .custom, let customImage {
+                Image(nsImage: customImage)
+                    .resizable()
+                    .scaledToFill()
+                    .blur(radius: 12)
+                Color.black.opacity(dim)
+            } else {
+                LinearGradient(colors: style.gradient,
+                               startPoint: .topLeading,
+                               endPoint: .bottomTrailing)
+            }
+        }
+    }
+}
+
 enum Theme {
 
     /// 电量 → 颜色：红 / 橙 / 黄 / 绿 / 青

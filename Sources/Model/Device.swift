@@ -6,6 +6,9 @@ enum DeviceKind: String, Codable, CaseIterable, Identifiable {
     case mouse
     case keyboard
     case trackpad
+    case phone
+    case tablet
+    case watch
     case gamepad
     case headset
     case other
@@ -17,6 +20,9 @@ enum DeviceKind: String, Codable, CaseIterable, Identifiable {
         case .mouse: return "鼠标"
         case .keyboard: return "键盘"
         case .trackpad: return "触控板"
+        case .phone: return "手机"
+        case .tablet: return "平板"
+        case .watch: return "手表"
         case .gamepad: return "手柄"
         case .headset: return "音频设备"
         case .other: return "其他外设"
@@ -28,6 +34,9 @@ enum DeviceKind: String, Codable, CaseIterable, Identifiable {
         case .mouse: return "computermouse"
         case .keyboard: return "keyboard"
         case .trackpad: return "rectangle.and.hand.point.up.left"
+        case .phone: return "iphone"
+        case .tablet: return "ipad"
+        case .watch: return "applewatch"
         case .gamepad: return "gamecontroller"
         case .headset: return "headphones"
         case .other: return "square.stack.3d.up"
@@ -39,9 +48,12 @@ enum DeviceKind: String, Codable, CaseIterable, Identifiable {
         case .mouse: return 0
         case .keyboard: return 1
         case .trackpad: return 2
-        case .gamepad: return 3
-        case .headset: return 4
-        case .other: return 5
+        case .phone: return 3
+        case .tablet: return 4
+        case .watch: return 5
+        case .gamepad: return 6
+        case .headset: return 7
+        case .other: return 8
         }
     }
 }
@@ -174,27 +186,6 @@ enum DeviceNameKey {
     }
 }
 
-// MARK: - 过滤非外设（手机 / 平板 / 手表 / 电脑）
-
-enum DeviceFilter {
-    // 注意：不要用 "phone" 这种子串，会误伤 "Headphones"
-    private static let patterns = [
-        "iphone", "ipad", "ipod",
-        "apple watch", "applewatch", " watch",
-        "macbook", "imac", "mac mini", "mac studio", "mac pro",
-        "手机", "平板", "手表"
-    ]
-
-    /// 名称是否像手机 / 平板 / 手表 / 电脑（这些不算外设，不展示电量）
-    static func isPhoneLike(_ name: String) -> Bool {
-        let n = name.lowercased()
-        for pattern in patterns where n.contains(pattern) {
-            return true
-        }
-        return false
-    }
-}
-
 // MARK: - 名称推断设备类型（当系统未给出 minorType / usage 时兜底）
 
 enum DeviceKindInference {
@@ -202,6 +193,9 @@ enum DeviceKindInference {
         (.mouse, ["mouse", "鼠标", "magic mouse", "mx master", "mx anywhere", "basilisk", "deathadder", "viper", "razer", "logitech m", "trackball", "m720", "m590", "m650", "lift"]),
         (.keyboard, ["keyboard", "键盘", "keychron", "mx keys", "magic keyboard", "langtu", "nuphy", "anne pro", "hhkb", "k8", "k3 ", "游戏键盘"]),
         (.trackpad, ["trackpad", "触控板", "magic trackpad"]),
+        (.phone, ["iphone", "手机", "pixel ", "galaxy s", "redmi", "小米", "华为"]),
+        (.tablet, ["ipad", "平板", "tablet"]),
+        (.watch, ["apple watch", "applewatch", " watch", "手表"]),
         (.gamepad, ["gamepad", "controller", "手柄", "xbox", "dualsense", "dualshock", "joy-con", "switch pro", "8bitdo", "vader", "flydigi", "飞智", "北通", "betop"]),
         (.headset, ["headphone", "headset", "耳机", "airpods", "speaker", "音箱", "buds", "edifier", "漫步者", "bose", "sony wh", "wh-", "qc", "soundcore"])
     ]

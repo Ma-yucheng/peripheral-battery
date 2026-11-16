@@ -101,6 +101,7 @@ enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
     case glass
     case solid
     case gradient
+    case style
 
     var id: String { rawValue }
 
@@ -109,6 +110,7 @@ enum WidgetBackground: String, Codable, CaseIterable, Identifiable {
         case .glass: return "毛玻璃"
         case .solid: return "纯色"
         case .gradient: return "渐变"
+        case .style: return "跟随风格"
         }
     }
 }
@@ -138,6 +140,10 @@ final class AppSettings: ObservableObject {
         static let menuBarShowsPercent = "pb.menuBarShowsPercent"
         static let demoMode = "pb.demoMode"
         static let accentStyle = "pb.accentStyle"
+        static let background = "pb.backgroundEnabled"
+        static let seenWelcome = "pb.hasSeenWelcome"
+        static let visualStyle = "pb.visualStyle"
+        static let customDim = "pb.customDim"
         static let widgetX = "pb.widgetX"
         static let widgetY = "pb.widgetY"
     }
@@ -218,6 +224,29 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(accentStyle, forKey: Key.accentStyle) }
     }
 
+    /// 登录时自动启动并常驻后台（LaunchAgent）
+    @Published var backgroundEnabled: Bool {
+        didSet { defaults.set(backgroundEnabled, forKey: Key.background) }
+    }
+
+    /// 是否已经看过首次启动说明
+    @Published var hasSeenWelcome: Bool {
+        didSet { defaults.set(hasSeenWelcome, forKey: Key.seenWelcome) }
+    }
+
+    /// 登录项当前是否已注册（仅内存，不持久化）
+    @Published var loginItemActive: Bool = false
+
+    /// 面板 / 小组件的视觉风格
+    @Published var visualStyle: VisualStyle {
+        didSet { defaults.set(visualStyle.rawValue, forKey: Key.visualStyle) }
+    }
+
+    /// 自定义背景图的暗化强度（0...0.7）
+    @Published var customDim: Double {
+        didSet { defaults.set(customDim, forKey: Key.customDim) }
+    }
+
     /// 面板里「设备选择」区块是否展开（仅内存，不持久化）
     @Published var selectorExpanded: Bool = true
 
@@ -259,6 +288,10 @@ final class AppSettings: ObservableObject {
         menuBarShowsPercent = defaults.object(forKey: Key.menuBarShowsPercent) as? Bool ?? true
         demoMode = defaults.object(forKey: Key.demoMode) as? Bool ?? false
         accentStyle = defaults.string(forKey: Key.accentStyle) ?? "aurora"
+        backgroundEnabled = defaults.object(forKey: Key.background) as? Bool ?? true
+        hasSeenWelcome = defaults.object(forKey: Key.seenWelcome) as? Bool ?? false
+        visualStyle = VisualStyle(rawValue: defaults.string(forKey: Key.visualStyle) ?? "") ?? .aurora
+        customDim = defaults.object(forKey: Key.customDim) as? Double ?? 0.35
     }
 
     // MARK: 选择框

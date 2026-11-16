@@ -158,8 +158,6 @@ final class BLEBatteryProvider: NSObject {
         for (id, entry) in entries {
             // 只展示有电池服务或曾拿到电量的外设
             guard entry.hasBatteryService || entry.level != nil else { continue }
-            // 手机 / 平板 / 手表 / 电脑也暴露 0x180F，但不是外设，排除
-            guard !DeviceFilter.isPhoneLike(entry.name) else { continue }
             var device = PeripheralDevice(
                 id: "ble:\(id.uuidString)",
                 name: entry.name,

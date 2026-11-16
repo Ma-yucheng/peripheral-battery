@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - 桌面小组件
 
@@ -20,7 +22,15 @@ struct WidgetView: View {
     }
 
     private var isDarkStyling: Bool {
-        settings.widgetBackground == .gradient
+        switch settings.widgetBackground {
+        case .gradient:
+            return true
+        case .style:
+            if settings.visualStyle == .custom { return true }
+            return !settings.visualStyle.isLight
+        default:
+            return false
+        }
     }
 
     private var mode: DisplayMode {
@@ -84,6 +94,10 @@ struct WidgetView: View {
                                     Color(red: 0.16, green: 0.13, blue: 0.24)],
                            startPoint: .topLeading,
                            endPoint: .bottomTrailing)
+        case .style:
+            StyleBackground(style: settings.visualStyle,
+                            customImage: CustomBackground.current(),
+                            dim: settings.customDim)
         }
     }
 }
@@ -96,12 +110,15 @@ struct SettingsView: View {
 
     let onRescan: () -> Void
     let onDiscoverGamepads: () -> Void
+    let onShowWelcome: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 modeSection
                 displaySection
+                styleSection
+                backgroundSection
                 widgetSection
                 deviceSection
                 sourceSection
@@ -142,6 +159,101 @@ struct SettingsView: View {
     }
 
     // MARK: 桌面组件
+
+    // MARK: 外观风格
+
+    private func pickCustomBackground() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "选择一张图片，作为面板与桌面小组件的背景"
+        panel.prompt = "使用这张图片"
+        if panel.runModal() == .OK, let url = panel.url, CustomBackground.save(from: url) {
+            settings.visualStyle = .custom
+        }
+    }
+
+    private var styleSection: some View {
+        SettingsSection(title: "外观风格", subtitle: "面板与桌面小组件的外观基调，共 6 套预设 + 自定义") {
+            VStack(alignment: .leading, spacing: 10) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()),
+                                    GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(VisualStyle.allCases) { style in
+                        StyleTile(style: style,
+                                  active: settings.visualStyle == style,
+                                  customImage: CustomBackground.current()) {
+                            settings.visualStyle = style
+                        }
+                    }
+                }
+
+                if settings.visualStyle == .custom {
+                    HStack(spacing: 8) {
+                        Button("选择背景图片…") { pickCustomBackground() }
+                            .font(.system(size: 10.5))
+                        Button("移除并恢复极光") {
+                            CustomBackground.remove()
+                            settings.visualStyle = .aurora
+                        }
+                        .font(.system(size: 10.5))
+                        Spacer()
+                    }
+
+                    HStack(spacing: 8) {
+                        Text("暗化").font(.system(size: 10.5))
+                        Slider(value: $settings.customDim, in: 0...0.7)
+                        Text("\(Int(settings.customDim * 100))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(Color.secondary)
+                            .frame(width: 34, alignment: .trailing)
+                    }
+
+                    Text("背景图会自动模糊并压一层暗色蒙层，保证电量数字清晰；「暗化」调得越高，背景越沉、文字越突出。")
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(Color.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: 后台与启动
+
+    private var loginItemStatusText: String {
+        if !BackgroundKeeper.shared.canRegisterLoginItem {
+            return "未安装在 /Applications，登录项暂不可用"
+        }
+        return settings.loginItemActive ? "登录项已生效，开机会自动回到菜单栏" : "登录项未启用"
+    }
+
+    private var backgroundSection: some View {
+        SettingsSection(title: "后台与启动", subtitle: "常驻菜单栏，开机登录后自动恢复") {
+            VStack(alignment: .leading, spacing: 8) {
+                ToggleRow(title: "登录时自动启动并常驻后台", isOn: $settings.backgroundEnabled)
+                    .onChange(of: settings.backgroundEnabled) { _, enabled in
+                        BackgroundKeeper.shared.applyLoginItem(enabled: enabled)
+                        settings.loginItemActive = BackgroundKeeper.shared.isLoginItemRegistered
+                    }
+
+                HStack(spacing: 6) {
+                    StatusDot(color: settings.loginItemActive ? Color.green : Color.secondary, size: 5)
+                    Text(loginItemStatusText)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.secondary)
+                    Spacer()
+                    Button("查看首次使用说明") { onShowWelcome() }
+                        .buttonStyle(.link)
+                        .font(.system(size: 10.5))
+                }
+
+                Text("运行时会禁用 App Nap 与自动终止，保证电量刷新不中断；「退出」仍可在菜单栏右键菜单里执行。")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
 
     private var widgetSection: some View {
         SettingsSection(title: "桌面小组件", subtitle: "可拖动摆放在桌面上，位置与设置自动保存") {
@@ -320,6 +432,48 @@ struct SettingsSection<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.04)))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.primary.opacity(0.07), lineWidth: 1))
+    }
+}
+
+struct StyleTile: View {
+    let style: VisualStyle
+    let active: Bool
+    let customImage: NSImage?
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack {
+                    if style == .custom, let customImage {
+                        Image(nsImage: customImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        LinearGradient(colors: style.gradient,
+                                       startPoint: .topLeading,
+                                       endPoint: .bottomTrailing)
+                    }
+                }
+                .frame(height: 36)
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .stroke(active ? Color.accentColor : Color.primary.opacity(0.12),
+                                lineWidth: active ? 2 : 1)
+                )
+
+                Text(style.title)
+                    .font(.system(size: 10, weight: active ? .semibold : .regular))
+                    .foregroundStyle(active ? Color.accentColor : Color.primary)
+                Text(style.subtitle)
+                    .font(.system(size: 8.5))
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

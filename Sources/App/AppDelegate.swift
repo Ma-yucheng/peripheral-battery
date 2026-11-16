@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var refreshTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     private var lastWidgetHeight: CGFloat = 0
+    private var welcomeWindow: NSWindow?
+    private var backgroundToken: NSObjectProtocol?
     private var widgetPlaced = false
     private var lastLoggedTitle: String = ""
     private let debugLog = ProcessInfo.processInfo.environment["PB_LOG"] != nil
@@ -28,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // 系统层面常驻：禁止自动终止 / 突然终止 / App Nap
+        backgroundToken = BackgroundKeeper.shared.beginBackgroundActivity()
         log("启动 demo=\(settings.demoMode) widgetVisible=\(settings.widgetVisible) mode=\(settings.displayMode.rawValue)")
         store.start()
         setupStatusItem()
@@ -37,6 +41,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         applyWidgetSettings()
         startRefreshTimer()
 
+        // 登录项 + 首次启动说明
+        if settings.hasSeenWelcome {
+            if settings.backgroundEnabled {
+                BackgroundKeeper.shared.installLoginItem()
+            }
+            settings.loginItemActive = BackgroundKeeper.shared.isLoginItemRegistered
+        } else {
+            showWelcome()
+        }
+
         // 调试 / 截图用：--show-panel 启动后自动打开面板
         if CommandLine.arguments.contains("--show-settings") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -44,7 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
         }
         if CommandLine.arguments.contains("--show-panel") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+                NSApp.activate(ignoringOtherApps: true)
                 self?.togglePopover()
             }
         }
@@ -218,12 +233,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             store: store,
             settings: settings,
             onRescan: { [weak self] in self?.store.rescan() },
-            onDiscoverGamepads: { [weak self] in self?.store.discoverGamepads() }
+            onDiscoverGamepads: { [weak self] in self?.store.discoverGamepads() },
+            onShowWelcome: { [weak self] in self?.showWelcome() }
         )
         window.contentViewController = NSHostingController(rootView: root)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow = window
+    }
+
+    // MARK: - 首次启动说明
+
+    func showWelcome() {
+        if let window = welcomeWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let model = WelcomeModel(backgroundEnabled: settings.backgroundEnabled)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 520),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "欢迎使用外设电量"
+        window.isReleasedWhenClosed = false
+        window.level = .floating          // 首次启动时确保用户能看到
+        window.center()
+
+        let root = WelcomeView(
+            model: model,
+            canRegisterLoginItem: BackgroundKeeper.shared.canRegisterLoginItem
+        ) { [weak self] in
+            guard let self else { return }
+            self.settings.backgroundEnabled = model.backgroundEnabled
+            self.settings.hasSeenWelcome = true
+            BackgroundKeeper.shared.applyLoginItem(enabled: model.backgroundEnabled)
+            self.settings.loginItemActive = BackgroundKeeper.shared.isLoginItemRegistered
+            self.welcomeWindow?.close()
+            self.welcomeWindow = nil
+        }
+        window.contentViewController = NSHostingController(rootView: root)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        welcomeWindow = window
     }
 
     // MARK: - 桌面小组件
