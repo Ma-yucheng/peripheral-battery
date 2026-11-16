@@ -126,7 +126,6 @@ struct DeviceCard: View {
             parts.append(device.source.shortLabel)
         }
         if device.state == .charging { parts.append("充电中") }
-        if !device.isConnected { parts.append("离线") }
         return parts.joined(separator: " · ")
     }
 
@@ -170,7 +169,6 @@ struct DeviceCard: View {
         }
         .padding(widget ? 12 : 9)
         .cardSurface(widget: widget)
-        .offlineDim(device)
     }
 
     private var componentsRow: some View {
@@ -244,7 +242,6 @@ struct RingTile: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, widget ? 10 : 8)
         .cardSurface(widget: widget)
-        .offlineDim(device)
     }
 }
 
@@ -300,7 +297,6 @@ struct BarRow: View {
         .padding(.horizontal, widget ? 12 : 10)
         .padding(.vertical, widget ? 9 : 8)
         .cardSurface(widget: widget)
-        .offlineDim(device)
     }
 }
 
@@ -347,7 +343,6 @@ struct PillChip: View {
         .background(Capsule().fill(tint.opacity(0.13)))
         .overlay(Capsule().stroke(tint.opacity(0.26), lineWidth: 1))
         .foregroundStyle(tint)
-        .offlineDim(device)
     }
 }
 
@@ -405,7 +400,6 @@ struct MinimalRow: View {
         .padding(.horizontal, widget ? 10 : 8)
         .padding(.vertical, widget ? 7 : 6)
         .cardSurface(widget: widget, radius: 9)
-        .offlineDim(device)
     }
 }
 
@@ -462,6 +456,5 @@ struct GridTile: View {
         .padding(.vertical, widget ? 10 : 9)
         .padding(.horizontal, 4)
         .cardSurface(widget: widget)
-        .offlineDim(device)
     }
 }

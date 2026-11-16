@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # 编译最新代码 → 替换 /Applications 里已安装的版本 → 重启
 # 用法：
-#   ./install.sh            更新并启动
-#   ./install.sh --dry-run  只演示会做什么，不编译、不动 /Applications
+#   ./install.sh             更新并启动（会先编译）
+#   ./install.sh --no-build  直接用 build/ 里现成的产物安装
+#   ./install.sh --dry-run   只演示会做什么，不编译、不动 /Applications
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,10 +12,12 @@ BUNDLE_ID="com.local.peripheralbattery"
 SRC="$ROOT/build/${APP_NAME}.app"
 DEST="/Applications/${APP_NAME}.app"
 DRY_RUN=0
+NO_BUILD=0
 
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --no-build) NO_BUILD=1 ;;
     -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
     *) echo "未知参数: $arg"; exit 2 ;;
   esac
@@ -27,6 +30,9 @@ dry()  { if [[ $DRY_RUN -eq 1 ]]; then echo "   [dry-run] $1"; fi; }
 step "1/5 编译最新代码"
 if [[ $DRY_RUN -eq 1 ]]; then
   dry "会执行 ./build.sh（本次跳过，避免等编译）"
+elif [[ $NO_BUILD -eq 1 ]]; then
+  [[ -d "$SRC" ]] || { echo "没有现成产物，先跑一次 ./build.sh"; exit 1; }
+  echo "   跳过编译，直接使用现有产物"
 else
   "$ROOT/build.sh"
   [[ -d "$SRC" ]] || { echo "构建产物不存在: $SRC"; exit 1; }

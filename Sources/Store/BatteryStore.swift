@@ -24,14 +24,6 @@ final class BatteryStore: ObservableObject {
     /// 每个设备的最近电量序列，用于卡片模式的走势线
     private var history: [String: [Int]] = [:]
 
-    /// 上次已知的电量快照：设备休眠 / 断开时仍能显示最后一次读数
-    private var cachedDevices: [PeripheralDevice] = []
-    private var lastCacheSave: Date = .distantPast
-
-    private enum CacheKey {
-        static let devices = "pb.lastKnownDevices"
-    }
-
     private var started = false
 
     func start() {
@@ -62,8 +54,6 @@ final class BatteryStore: ObservableObject {
             self.rawDemo = list
             if AppSettings.shared.demoMode { self.rebuild() }
         }
-
-        loadCache()
 
         ble.start()
         hid.start()
@@ -156,25 +146,17 @@ final class BatteryStore: ObservableObject {
             result.append(device)
         }
 
-        // 合并上次已知快照：设备休眠 / 断开时不会从面板消失
-        var seen = Set(result.map(\.id))
-        for cached in cachedDevices where !seen.contains(cached.id) {
-            var copy = cached
-            copy.isConnected = false
-            result.append(copy)
-            seen.insert(copy.id)
-        }
+        // 只展示当前在线的设备：断开 / 休眠的直接移出列表
+        result = result.filter { $0.isConnected }
 
-        // 排序：在线优先，其次有电量、类型、名称
+        // 排序：有电量在前，其次按类型、名称
         result.sort { lhs, rhs in
-            if lhs.isConnected != rhs.isConnected { return lhs.isConnected }
             if (lhs.level != nil) != (rhs.level != nil) { return lhs.level != nil }
             if lhs.kind.sortIndex != rhs.kind.sortIndex { return lhs.kind.sortIndex < rhs.kind.sortIndex }
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
 
         updateHistory(with: result)
-        refreshCache(with: result)
         devices = result
         lastRefresh = Date()
         sourceSummary = summary(for: result)
@@ -184,29 +166,6 @@ final class BatteryStore: ObservableObject {
                 .map { "\($0.name)=\($0.levelText)[\($0.source.shortLabel)]" }
                 .joined(separator: ", ")
             print("[PB] \(result.count) 台: \(desc)")
-        }
-    }
-
-    // MARK: - 上次已知电量缓存
-
-    private func loadCache() {
-        guard let data = UserDefaults.standard.data(forKey: CacheKey.devices),
-              let list = try? JSONDecoder().decode([PeripheralDevice].self, from: data) else { return }
-        cachedDevices = list.filter { !$0.isDemo && Date().timeIntervalSince($0.lastUpdate) < 7 * 24 * 3600 }
-    }
-
-    private func refreshCache(with devices: [PeripheralDevice]) {
-        var cache = cachedDevices.filter { Date().timeIntervalSince($0.lastUpdate) < 7 * 24 * 3600 }
-        for device in devices where device.isConnected && device.level != nil && !device.isDemo {
-            cache.removeAll { $0.id == device.id }
-            cache.append(device)
-        }
-        cachedDevices = cache
-        // 最多每 20 秒落盘一次，避免频繁写 UserDefaults
-        if Date().timeIntervalSince(lastCacheSave) > 20,
-           let data = try? JSONEncoder().encode(cache) {
-            UserDefaults.standard.set(data, forKey: CacheKey.devices)
-            lastCacheSave = Date()
         }
     }
 

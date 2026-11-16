@@ -22,7 +22,6 @@ enum Layout {
                 var height: CGFloat = 88
                 if showSparkline { height += 16 }
                 if !device.components.isEmpty { height += 30 }
-                if !device.isConnected { height += 6 }
                 return sum + height
             }
             raw = (devices.isEmpty ? 78 : perCard) + 20
@@ -49,13 +48,6 @@ enum Layout {
         let content = contentHeight(mode: mode, devices: devices, showSparkline: showSparkline)
         let listHeight = selectorExpanded ? min(CGFloat(max(1, devices.count)) * selectorRowHeight + 10, 200) : 0
         return min(800, base + content + listHeight)
-    }
-}
-
-extension View {
-    /// 离线（休眠）设备整体压暗，避免和实时读数混淆
-    func offlineDim(_ device: PeripheralDevice) -> some View {
-        opacity(device.isConnected ? 1.0 : 0.52)
     }
 }
 

@@ -174,6 +174,27 @@ enum DeviceNameKey {
     }
 }
 
+// MARK: - 过滤非外设（手机 / 平板 / 手表 / 电脑）
+
+enum DeviceFilter {
+    // 注意：不要用 "phone" 这种子串，会误伤 "Headphones"
+    private static let patterns = [
+        "iphone", "ipad", "ipod",
+        "apple watch", "applewatch", " watch",
+        "macbook", "imac", "mac mini", "mac studio", "mac pro",
+        "手机", "平板", "手表"
+    ]
+
+    /// 名称是否像手机 / 平板 / 手表 / 电脑（这些不算外设，不展示电量）
+    static func isPhoneLike(_ name: String) -> Bool {
+        let n = name.lowercased()
+        for pattern in patterns where n.contains(pattern) {
+            return true
+        }
+        return false
+    }
+}
+
 // MARK: - 名称推断设备类型（当系统未给出 minorType / usage 时兜底）
 
 enum DeviceKindInference {

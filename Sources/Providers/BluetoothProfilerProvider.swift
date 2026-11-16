@@ -136,9 +136,7 @@ final class BluetoothProfilerProvider {
     private static func isPhoneLike(minorType: String, name: String) -> Bool {
         let t = minorType.lowercased()
         if t.contains("phone") || t.contains("pad") || t.contains("computer") || t.contains("watch") { return true }
-        let n = name.lowercased()
-        if n.contains("iphone") || n.contains("ipad") || n.contains("macbook") || n.contains("watch") { return true }
-        return false
+        return DeviceFilter.isPhoneLike(name)
     }
 
     private static func kind(from minorType: String, name: String) -> DeviceKind {
